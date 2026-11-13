@@ -138,7 +138,12 @@ export interface TtsStatus {
 
 export interface ApiError {
   error: string;
-  /** Machine-readable code, e.g. "missing_api_key", "rate_limited", "refused", "bad_request" */
+  /**
+   * Machine-readable code: "bad_request", "missing_api_key", "invalid_api_key", "permission_denied",
+   * "not_found", "rate_limited", "too_large", "upstream_bad_request", "overloaded", "upstream_error",
+   * "connection_error", "timeout", "aborted", "internal_error", "refused", "incomplete",
+   * "bad_model_output", "cloud_tts_disabled".
+   */
   code?: string;
 }
 
@@ -286,7 +291,11 @@ export interface SpeechController {
   error: string | null;
 }
 
-/** lib/voice/tts.ts — `export function useSpeaker(mode: VoiceMode): SpeakerController` */
+/**
+ * lib/voice/tts.ts — `export function useSpeaker(mode: VoiceMode): SpeakerController`
+ *   also: `export function unlockAudio(): void` — call synchronously inside a click handler
+ *   (required for iOS audio), and `export function cleanForSpeech(text: string): string`.
+ */
 export interface SpeakerController {
   /** Browser speech or cloud voice available at all */
   supported: boolean;
@@ -311,6 +320,8 @@ export interface SpeakerController {
  *   export function isScreenShareSupported(): boolean
  *   export async function captureFrame(stream: MediaStream, maxWidth?: number, quality?: number): Promise<string | null>
  *     → base64 JPEG without "data:" prefix, or null if the stream has no live video.
+ *   export function framesDiffer(a: string | null, b: string | null): boolean
+ *     → cheap "did the screen change?" check, used to skip resending identical screenshots.
  *
  * components/capture/ScreenShare.tsx
  *   export default function ScreenShare(props: ScreenShareProps): JSX.Element

@@ -1,4 +1,5 @@
-// STUB — owned by Agent D (pages). Replace with setup screen.
+import SetupScreen from "@/components/room/SetupScreen";
+
 export default function Home() {
-  return <main className="container"><h1>Speech Coach</h1></main>;
+  return <SetupScreen />;
 }
