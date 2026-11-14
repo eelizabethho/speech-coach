@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import type { FeedbackReport as Report, SavedSession } from "@/lib/types";
 import FeedbackReport, { MetricsCard, reportToText } from "./FeedbackReport";
 import Transcript from "./Transcript";
+import ConfirmDialog from "./ConfirmDialog";
 import styles from "./room.module.css";
 
 interface ReportViewProps {
@@ -14,9 +15,12 @@ interface ReportViewProps {
   onRetry?: () => void;
   /** Extra buttons (e.g. Practice again / New setup) */
   actions?: ReactNode;
+  /** Shows a "Delete this session" button; called after the user confirms. */
+  onDelete?: () => void;
 }
 
-export default function ReportView({ session, feedback, loading, error, onRetry, actions }: ReportViewProps) {
+export default function ReportView({ session, feedback, loading, error, onRetry, actions, onDelete }: ReportViewProps) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [copied, setCopied] = useState<"idle" | "ok" | "fail">("idle");
   const [showTranscript, setShowTranscript] = useState(false);
 
@@ -38,6 +42,11 @@ export default function ReportView({ session, feedback, loading, error, onRetry,
         {!loading && (
           <button type="button" className="btn" onClick={copy}>
             {copied === "ok" ? "Copied!" : copied === "fail" ? "Copy failed" : "Copy report"}
+          </button>
+        )}
+        {onDelete && (
+          <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(true)}>
+            Delete this session
           </button>
         )}
       </div>
@@ -89,6 +98,22 @@ export default function ReportView({ session, feedback, loading, error, onRetry,
         </button>
         {showTranscript && <Transcript turns={session.turns} autoScroll={false} emptyHint="No messages were recorded." />}
       </section>
+
+      {confirmDelete && onDelete && (
+        <ConfirmDialog title="Delete this session?" onCancel={() => setConfirmDelete(false)}>
+          <p className="muted" style={{ margin: 0 }}>
+            The transcript, stats, and feedback will be removed from this browser. This can&apos;t be undone.
+          </p>
+          <div className="row" style={{ justifyContent: "flex-end" }}>
+            <button type="button" className="btn" onClick={() => setConfirmDelete(false)} autoFocus>
+              Keep it
+            </button>
+            <button type="button" className="btn btn-danger" onClick={onDelete}>
+              Delete
+            </button>
+          </div>
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

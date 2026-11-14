@@ -12,8 +12,10 @@ import type {
   InterviewMode,
   SpeechMetrics,
   Turn,
+  VoiceEngine,
   VoiceMode,
 } from "@/lib/types";
+import { VOICE_OPTIONS } from "@/lib/types";
 
 export class ValidationError extends Error {}
 
@@ -21,6 +23,8 @@ export const CHAT_MODELS: readonly ChatModel[] = ["claude-haiku-5-5", "claude-so
 const MODES: readonly InterviewMode[] = ["behavioral", "technical", "system-design", "leetcode", "custom"];
 const DIFFICULTIES: readonly Difficulty[] = ["easy", "medium", "hard"];
 const VOICES: readonly VoiceMode[] = ["browser", "cloud"];
+const ENGINES: readonly VoiceEngine[] = ["claude", "gemini-live"];
+const CLOUD_VOICES: readonly string[] = ["random", ...Object.keys(VOICE_OPTIONS)];
 const LANGUAGES: readonly CodeLanguage[] = ["python", "javascript", "typescript", "java", "cpp", "go", "pseudocode"];
 
 // Generous limits that keep a single request bounded.
@@ -62,6 +66,7 @@ export function parseConfig(v: unknown): InterviewConfig {
   if (!isObj(v)) throw new ValidationError(`"config" must be an object.`);
   const config: InterviewConfig = {
     mode: oneOf(v, "mode", MODES),
+    engine: v.engine === undefined ? "claude" : oneOf(v, "engine", ENGINES),
     role: str(v, "role", 200),
     company: str(v, "company", 200),
     jobDescription: str(v, "jobDescription"),
@@ -70,6 +75,7 @@ export function parseConfig(v: unknown): InterviewConfig {
     durationMin: num(v, "durationMin", 1, 180),
     model: oneOf(v, "model", CHAT_MODELS),
     voice: v.voice === undefined ? "browser" : oneOf(v, "voice", VOICES),
+    cloudVoice: v.cloudVoice === undefined ? "random" : oneOf(v, "cloudVoice", CLOUD_VOICES),
   };
   if (config.mode === "custom" && !config.customScenario.trim()) {
     throw new ValidationError("A custom interview needs a scenario description.");

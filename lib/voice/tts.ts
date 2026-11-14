@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { SpeakerController, TtsStatus, VoiceMode } from "@/lib/types";
+import { VOICE_OPTIONS, type SpeakerController, type TtsStatus, type VoiceMode } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
 // Sentence chunking
@@ -202,7 +202,15 @@ const needsKeepalive = () =>
   /Chrome\//.test(navigator.userAgent) &&
   !/Android|Mobile/i.test(navigator.userAgent);
 
-export function useSpeaker(mode: VoiceMode): SpeakerController {
+/** "random" becomes one concrete id, so a voice stays the same for a whole interview. */
+function resolveCloudVoice(voiceId?: string): string | undefined {
+  if (voiceId !== "random") return voiceId;
+  const ids = Object.keys(VOICE_OPTIONS);
+  return ids[Math.floor(Math.random() * ids.length)];
+}
+
+export function useSpeaker(mode: VoiceMode, voiceId?: string): SpeakerController {
+  const [cloudVoice] = useState(() => resolveCloudVoice(voiceId));
   const [hasSynth, setHasSynth] = useState(false);
   const [cloudEnabled, setCloudEnabled] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -260,7 +268,7 @@ export function useSpeaker(mode: VoiceMode): SpeakerController {
     item.audio = fetch("/api/tts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: item.text.slice(0, 1000) }),
+      body: JSON.stringify({ text: item.text.slice(0, 1000), voice: cloudVoice }),
       signal: ctrl.signal,
     })
       .then(async (r) => {

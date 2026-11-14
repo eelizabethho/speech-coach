@@ -22,6 +22,8 @@ interface RoomControlsProps {
   voiceNote?: string | null;
   onMic: () => void;
   onSendText: (text: string) => void;
+  /** Gemini Live: always-open call; the mic button mutes/unmutes instead of sending. */
+  live?: boolean;
 }
 
 function MicIcon({ stop }: { stop: boolean }) {
@@ -60,7 +62,14 @@ export default function RoomControls(p: RoomControlsProps) {
 
   let status: string;
   let dot = "";
-  if (p.listening) {
+  if (p.live) {
+    status = p.speaking
+      ? "Interviewer is speaking — just talk to interrupt"
+      : p.listening
+        ? "Live — talk naturally. Pausing to think is fine."
+        : "Your mic is off — tap it to talk";
+    dot = p.speaking ? styles.dotSpeaking : p.listening ? styles.dotListening : "";
+  } else if (p.listening) {
     status = p.handsFree ? "Listening… pause to send, or tap to send now" : "Listening… tap the mic to send";
     dot = styles.dotListening;
   } else if (p.thinking) {
@@ -76,7 +85,7 @@ export default function RoomControls(p: RoomControlsProps) {
   }
 
   const micDisabled = !p.speechSupported || p.thinking;
-  const micLabel = p.listening ? "Send answer" : p.speaking || p.streaming ? "Interrupt and answer" : "Start answering";
+  const micLabel = p.live ? (p.listening ? "Turn mic off" : "Turn mic on") : p.listening ? "Send answer" : p.speaking || p.streaming ? "Interrupt and answer" : "Start answering";
 
   return (
     <div className={p.className}>
@@ -102,7 +111,7 @@ export default function RoomControls(p: RoomControlsProps) {
             title={micLabel}
             aria-pressed={p.listening}
           >
-            <MicIcon stop={p.listening} />
+            <MicIcon stop={p.listening && !p.live} />
           </button>
         )}
         <form className={styles.textForm} onSubmit={submit}>
@@ -126,7 +135,7 @@ export default function RoomControls(p: RoomControlsProps) {
       </div>
 
       <div className={styles.toggles}>
-        {p.speechSupported && (
+        {p.speechSupported && !p.live && (
           <button type="button" className={styles.toggle} aria-pressed={p.handsFree} onClick={() => p.onHandsFreeChange(!p.handsFree)}>
             {p.handsFree ? "Hands-free on" : "Hands-free paused"}
           </button>

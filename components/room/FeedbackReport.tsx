@@ -6,7 +6,7 @@ import styles from "./report.module.css";
 
 function scoreColor(score: number): string {
   if (score >= 8) return "var(--success)";
-  if (score >= 6) return "var(--accent)";
+  if (score >= 6) return "var(--text-2)";
   if (score >= 4) return "var(--warning)";
   return "var(--danger)";
 }

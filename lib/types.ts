@@ -23,8 +23,21 @@ export type ChatModel = "claude-haiku-5-5" | "claude-sonnet-5-5" | "claude-opus-
 
 export type VoiceMode = "browser" | "cloud";
 
+export type TurnRole = "interviewer" | "candidate";
+
+/** POST /api/live-token success body: a short-lived Gemini Live token plus the locked session settings. */
+export interface LiveTokenResponse {
+  token: string;
+  model: string;
+  config: import("@google/genai").LiveConnectConfig;
+}
+
+/** "claude": speech-to-text → Claude → text-to-speech. "gemini-live": Gemini speech-to-speech. */
+export type VoiceEngine = "claude" | "gemini-live";
+
 export interface InterviewConfig {
   mode: InterviewMode;
+  engine: VoiceEngine;
   /** e.g. "Software Engineer Intern" */
   role: string;
   /** e.g. "Google" — may be empty */
@@ -38,10 +51,13 @@ export interface InterviewConfig {
   durationMin: number;
   model: ChatModel;
   voice: VoiceMode;
+  /** Cloud voice id from VOICE_OPTIONS, or "random" (a new pick each interview). */
+  cloudVoice: string;
 }
 
 export const DEFAULT_CONFIG: InterviewConfig = {
   mode: "behavioral",
+  engine: "claude",
   role: "Software Engineer Intern",
   company: "",
   jobDescription: "",
@@ -50,6 +66,7 @@ export const DEFAULT_CONFIG: InterviewConfig = {
   durationMin: 30,
   model: "claude-haiku-5-5",
   voice: "browser",
+  cloudVoice: "random",
 };
 
 export const MODE_LABELS: Record<InterviewMode, string> = {
@@ -58,6 +75,18 @@ export const MODE_LABELS: Record<InterviewMode, string> = {
   "system-design": "System design",
   leetcode: "LeetCode / coding",
   custom: "Custom scenario",
+};
+
+/** Google Chirp3 HD voices the user can pick for the cloud voice; also the server allowlist. */
+export const VOICE_OPTIONS: Record<string, string> = {
+  "en-US-Chirp3-HD-Charon": "Charon — male",
+  "en-US-Chirp3-HD-Puck": "Puck — male",
+  "en-US-Chirp3-HD-Fenrir": "Fenrir — male",
+  "en-US-Chirp3-HD-Orus": "Orus — male",
+  "en-US-Chirp3-HD-Aoede": "Aoede — female",
+  "en-US-Chirp3-HD-Kore": "Kore — female",
+  "en-US-Chirp3-HD-Leda": "Leda — female",
+  "en-US-Chirp3-HD-Zephyr": "Zephyr — female",
 };
 
 export const MODEL_LABELS: Record<ChatModel, string> = {
@@ -86,7 +115,7 @@ export interface CodeSnapshot {
 
 export interface Turn {
   id: string;
-  role: "interviewer" | "candidate";
+  role: TurnRole;
   text: string;
   /** ms since epoch */
   at: number;
@@ -113,6 +142,10 @@ export interface InterviewRequest {
   turns: Turn[];
   /** Seconds since the interview started — lets the interviewer pace and wrap up. */
   elapsedSec: number;
+  /** The turn ended on a pause, so the interviewer may stay silent (reply WAIT_MARKER). */
+  mayWait?: boolean;
+  /** Idle check: seconds the candidate has said nothing. Implies mayWait. */
+  silentSec?: number;
 }
 
 /**
@@ -129,8 +162,9 @@ export interface FeedbackRequest {
 
 /**
  * GET  /api/tts → 200 JSON TtsStatus
- * POST /api/tts  Body: { text: string } → 200 audio/mpeg bytes, or ApiError
- *               (503 when cloud voice is not configured).
+ * POST /api/tts  Body: { text: string; voice?: string } → 200 audio/mpeg bytes, or ApiError
+ *               (503 when cloud voice is not configured). `voice` outside VOICE_OPTIONS
+ *               falls back to the server default.
  */
 export interface TtsStatus {
   cloudEnabled: boolean;
@@ -268,9 +302,10 @@ export interface SpeechOptions {
   /**
    * Called once when the candidate finishes an answer: either stop() was
    * called, or there was silence for `autoSendAfterMs` (if > 0) after speech.
-   * Receives the full accumulated final transcript of that answer (trimmed, non-empty).
+   * Receives the full accumulated final transcript of that answer (trimmed, non-empty),
+   * and whether it ended on a silence pause (true) rather than a deliberate stop().
    */
-  onUtterance: (text: string) => void;
+  onUtterance: (text: string, viaPause: boolean) => void;
   /** Silence (ms) after which the answer is auto-submitted. 0 disables. Default 2500. */
   autoSendAfterMs?: number;
   /** BCP-47 language, default "en-US". */
@@ -292,7 +327,8 @@ export interface SpeechController {
 }
 
 /**
- * lib/voice/tts.ts — `export function useSpeaker(mode: VoiceMode): SpeakerController`
+ * lib/voice/tts.ts — `export function useSpeaker(mode: VoiceMode, voiceId?: string): SpeakerController`
+ *   voiceId is a VOICE_OPTIONS id or "random" (picked once per mount, i.e. per interview).
  *   also: `export function unlockAudio(): void` — call synchronously inside a click handler
  *   (required for iOS audio), and `export function cleanForSpeech(text: string): string`.
  */

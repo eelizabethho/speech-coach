@@ -138,13 +138,13 @@ export function useSpeechRecognition(opts: SpeechOptions): SpeechController {
 
   // `finish` is referenced from recognizer callbacks; keep it in a ref so the
   // callbacks never see a stale version.
-  const finishRef = useRef<(submit: boolean) => void>(() => {});
-  finishRef.current = (submit: boolean) => {
+  const finishRef = useRef<(submit: boolean, viaPause?: boolean) => void>(() => {});
+  finishRef.current = (submit: boolean, viaPause = false) => {
     if (!wantRef.current) return; // already finished (exactly-once guard)
     const text = fullText();
     teardown();
     resetAnswer();
-    if (submit && text) onUtteranceRef.current(text);
+    if (submit && text) onUtteranceRef.current(text, viaPause);
   };
 
   const armSilenceTimer = () => {
@@ -152,7 +152,7 @@ export function useSpeechRecognition(opts: SpeechOptions): SpeechController {
     silenceTimerRef.current = null;
     const ms = autoSendRef.current;
     if (ms > 0 && fullText()) {
-      silenceTimerRef.current = setTimeout(() => finishRef.current(true), ms);
+      silenceTimerRef.current = setTimeout(() => finishRef.current(true, true), ms);
     }
   };
 

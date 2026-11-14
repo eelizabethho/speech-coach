@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { ApiError, TtsStatus } from "@/lib/types";
+import { VOICE_OPTIONS, type ApiError, type TtsStatus } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,8 +24,9 @@ export async function POST(req: Request) {
   }
 
   let text: unknown;
+  let voice: unknown;
   try {
-    ({ text } = (await req.json()) as { text?: unknown });
+    ({ text, voice } = (await req.json()) as { text?: unknown; voice?: unknown });
   } catch {
     return apiError(400, "Body must be JSON: { text: string }.", "bad_request");
   }
@@ -44,7 +45,11 @@ export async function POST(req: Request) {
         input: { text: text.trim() },
         voice: {
           languageCode: "en-US",
-          name: process.env.GOOGLE_TTS_VOICE || "en-US-Neural2-F",
+          // Only allowlisted ids reach Google; anything else uses the server default.
+          name:
+            typeof voice === "string" && Object.keys(VOICE_OPTIONS).includes(voice)
+              ? voice
+              : process.env.GOOGLE_TTS_VOICE || "en-US-Neural2-F",
         },
         audioConfig: { audioEncoding: "MP3", speakingRate: 1.05 },
       }),

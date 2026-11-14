@@ -12,19 +12,22 @@ export const dynamic = "force-dynamic";
 
 const JOIN_MESSAGE =
   "[The candidate has joined the call. Begin the interview: greet them briefly and ask your first question.]";
-const SILENT_MESSAGE =
-  "[The candidate hasn't responded yet. Continue naturally: briefly check in, or rephrase your last question.]";
+const SILENT_MESSAGE = "[The candidate hasn't responded yet.]";
 const REFUSAL_LINE = "Sorry, let's move on to a different question.";
 
 export async function POST(req: Request): Promise<Response> {
   let config: InterviewConfig;
   let turns: Turn[];
   let elapsedSec: number;
+  let silentSec: number | undefined;
+  let mayWait: boolean;
   try {
     const body = await readJsonBody(req);
     config = parseConfig(body.config);
     turns = parseTurns(body.turns);
     elapsedSec = body.elapsedSec === undefined ? 0 : readNumber(body, "elapsedSec", 0, 24 * 3600);
+    silentSec = body.silentSec === undefined ? undefined : readNumber(body, "silentSec", 0, 24 * 3600);
+    mayWait = body.mayWait === true;
   } catch (err) {
     if (err instanceof ValidationError) return jsonError(400, { code: "bad_request", error: err.message });
     return errorResponse(err);
@@ -33,7 +36,7 @@ export async function POST(req: Request): Promise<Response> {
   const gen = streamReply({
     model: config.model,
     system: buildSystemPrompt(config),
-    messages: toMessages(turns, buildPacingNote(config, elapsedSec)),
+    messages: toMessages(turns, buildPacingNote(config, elapsedSec, { mayWait, silentSec })),
     effort: "low", // fast conversational turns
     maxTokens: 2000,
     signal: req.signal,

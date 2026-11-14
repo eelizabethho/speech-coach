@@ -7,10 +7,12 @@ import {
   DEFAULT_CONFIG,
   MODE_LABELS,
   MODEL_LABELS,
+  VOICE_OPTIONS,
   type ChatModel,
   type Difficulty,
   type InterviewConfig,
   type SavedSession,
+  type VoiceEngine,
   type VoiceMode,
 } from "@/lib/types";
 import { isScreenShareSupported } from "@/lib/capture/frame";
@@ -21,6 +23,7 @@ import styles from "./setup.module.css";
 const DIFFICULTIES: Difficulty[] = ["easy", "medium", "hard"];
 const LENGTHS = [15, 30, 45];
 const VOICES: VoiceMode[] = ["browser", "cloud"];
+const ENGINES: VoiceEngine[] = ["gemini-live", "claude"];
 
 function Segmented<T extends string | number>({
   label,
@@ -125,7 +128,7 @@ export default function SetupScreen() {
           <fieldset className={styles.section}>
             <legend>Interview type</legend>
             <div className={styles.modes} role="radiogroup" aria-label="Interview type">
-              {MODE_ORDER.map((m) => {
+              {MODE_ORDER.map((m, i) => {
                 const active = config.mode === m;
                 return (
                   <button
@@ -137,7 +140,7 @@ export default function SetupScreen() {
                     onClick={() => update("mode", m)}
                   >
                     <span className={styles.modeIcon} aria-hidden="true">
-                      {MODE_INFO[m].icon}
+                      {String(i + 1).padStart(2, "0")}
                     </span>
                     <span>
                       <span className={styles.modeTitle}>{MODE_LABELS[m]}</span>
@@ -243,8 +246,22 @@ export default function SetupScreen() {
                 render={(v) => `${v} min`}
               />
               <div>
+                <Segmented
+                  label="Interviewer engine"
+                  options={ENGINES}
+                  value={config.engine}
+                  onChange={(v) => update("engine", v)}
+                  render={(v) => (v === "gemini-live" ? "Gemini Live (natural call)" : "Claude (turn by turn)")}
+                />
+                <div className={styles.hint}>
+                  {config.engine === "gemini-live"
+                    ? "A real-time voice call: pause to think, talk over it to interrupt. Needs GEMINI_API_KEY. Claude still writes your feedback report."
+                    : "Claude listens through your browser's speech recognition and replies with a synthesized voice."}
+                </div>
+              </div>
+              <div>
                 <label className="label" htmlFor="model">
-                  Interviewer model
+                  {config.engine === "gemini-live" ? "Feedback model" : "Interviewer model"}
                 </label>
                 <select
                   id="model"
@@ -260,6 +277,7 @@ export default function SetupScreen() {
                 </select>
                 <div className={styles.hint}>Haiku is the cheapest and replies fastest — great for practice.</div>
               </div>
+              {config.engine === "claude" && (
               <Segmented
                 label="Interviewer voice"
                 options={VOICES}
@@ -267,6 +285,27 @@ export default function SetupScreen() {
                 onChange={(v) => update("voice", v)}
                 render={(v) => (v === "browser" ? "Browser (free)" : "Natural (cloud)")}
               />
+              )}
+              {config.engine === "claude" && config.voice === "cloud" && (
+                <div>
+                  <label className="label" htmlFor="cloud-voice">
+                    Voice
+                  </label>
+                  <select
+                    id="cloud-voice"
+                    className="select"
+                    value={config.cloudVoice}
+                    onChange={(e) => update("cloudVoice", e.target.value)}
+                  >
+                    <option value="random">Random each interview</option>
+                    {Object.entries(VOICE_OPTIONS).map(([id, label]) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </fieldset>
 
@@ -285,7 +324,7 @@ export default function SetupScreen() {
             </h2>
             <ul className={styles.tips}>
               <li>Use a quiet room and headphones so the mic doesn&apos;t pick up the interviewer.</li>
-              <li>Hands-free mode sends your answer after a short pause — just talk.</li>
+              <li>Hands-free mode lets you pause to think — the interviewer only steps in when you hand it over.</li>
               <li>The code panel works on every device; the interviewer sees it when you answer.</li>
               {screenShareOk ? (
                 <li>On a laptop you can share your screen (e.g. a diagram or IDE) with the interviewer.</li>

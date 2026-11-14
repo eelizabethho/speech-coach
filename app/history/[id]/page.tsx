@@ -51,7 +51,7 @@ export default function HistoryPage() {
         <Link href="/" className="small">
           ← All sessions
         </Link>
-        <h1 style={{ marginTop: 8, fontSize: "1.5rem" }}>{MODE_LABELS[config.mode] ?? config.mode} interview</h1>
+        <h1 style={{ marginTop: 8 }}>{MODE_LABELS[config.mode] ?? config.mode} interview</h1>
         <p className="muted small" style={{ margin: 0 }}>
           {[config.role, config.company, when].filter(Boolean).join(" · ")}
         </p>
@@ -72,20 +72,12 @@ export default function HistoryPage() {
             >
               Practice this again
             </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                if (window.confirm("Delete this session?")) {
-                  deleteSession(session.id);
-                  router.push("/");
-                }
-              }}
-            >
-              Delete
-            </button>
           </>
         }
+        onDelete={() => {
+          deleteSession(session.id);
+          router.push("/");
+        }}
       />
     </main>
   );

@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type InterviewConfig, type SavedSession, type Turn } from "@/lib/types";
+import { DEFAULT_CONFIG, VOICE_OPTIONS, type InterviewConfig, type SavedSession, type Turn } from "@/lib/types";
 
 export const SESSIONS_KEY = "speech-coach:sessions";
 export const LAST_CONFIG_KEY = "speech-coach:last-config";
@@ -28,6 +28,7 @@ export function normalizeConfig(raw: unknown): InterviewConfig | null {
   if (!raw || typeof raw !== "object") return null;
   const merged = { ...DEFAULT_CONFIG, ...(raw as Partial<InterviewConfig>) };
   if (typeof merged.mode !== "string" || typeof merged.role !== "string") return null;
+  if (!Object.keys(VOICE_OPTIONS).includes(merged.cloudVoice)) merged.cloudVoice = "random";
   return merged;
 }
 
