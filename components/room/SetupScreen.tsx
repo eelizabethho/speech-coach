@@ -17,6 +17,7 @@ import {
 } from "@/lib/types";
 import { isScreenShareSupported } from "@/lib/capture/frame";
 import { deleteSession, listSessions, loadLastConfig, saveLastConfig, setActiveConfig } from "@/lib/session/history";
+import { pickChallenge } from "@/lib/challenges";
 import { MODE_INFO, MODE_ORDER } from "./modeInfo";
 import styles from "./setup.module.css";
 
@@ -100,6 +101,8 @@ export default function SetupScreen() {
       company: config.company.trim(),
       jobDescription: config.jobDescription.trim(),
       customScenario: config.mode === "custom" ? config.customScenario.trim() : config.customScenario,
+      // A fresh random codebase each start.
+      challengeId: config.mode === "ai-coding" ? pickChallenge(config.difficulty, config.challengeId).id : config.challengeId,
     };
     saveLastConfig(final);
     setActiveConfig(final);

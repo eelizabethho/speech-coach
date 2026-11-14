@@ -20,6 +20,7 @@ const VOCAB: Record<InterviewMode, string[]> = {
   technical: ["API", "REST", "SQL", "indexing", "concurrency", "mutex", "garbage collection", "TCP", "HTTP", "Kubernetes", "React"],
   "system-design": ["load balancer", "sharding", "replication", "CDN", "cache", "Redis", "Kafka", "QPS", "latency", "consistency"],
   behavioral: ["STAR", "stakeholder", "deadline", "ownership"],
+  "ai-coding": ["repo", "Copilot", "Cursor", "Claude", "Gemini", "prompt", "diff", "unit test", "migration", "endpoint", "refactor"],
   custom: [],
 };
 

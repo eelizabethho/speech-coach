@@ -16,11 +16,12 @@ import type {
   VoiceMode,
 } from "@/lib/types";
 import { VOICE_OPTIONS } from "@/lib/types";
+import { getChallenge } from "@/lib/challenges";
 
 export class ValidationError extends Error {}
 
 export const CHAT_MODELS: readonly ChatModel[] = ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"];
-const MODES: readonly InterviewMode[] = ["behavioral", "technical", "system-design", "leetcode", "custom"];
+const MODES: readonly InterviewMode[] = ["behavioral", "technical", "system-design", "leetcode", "ai-coding", "custom"];
 const DIFFICULTIES: readonly Difficulty[] = ["easy", "medium", "hard"];
 const VOICES: readonly VoiceMode[] = ["browser", "cloud"];
 const ENGINES: readonly VoiceEngine[] = ["claude", "gemini-live"];
@@ -71,6 +72,7 @@ export function parseConfig(v: unknown): InterviewConfig {
     company: str(v, "company", 200),
     jobDescription: str(v, "jobDescription"),
     customScenario: str(v, "customScenario"),
+    challengeId: str(v, "challengeId", 100),
     difficulty: oneOf(v, "difficulty", DIFFICULTIES),
     durationMin: num(v, "durationMin", 1, 180),
     model: oneOf(v, "model", CHAT_MODELS),
@@ -79,6 +81,9 @@ export function parseConfig(v: unknown): InterviewConfig {
   };
   if (config.mode === "custom" && !config.customScenario.trim()) {
     throw new ValidationError("A custom interview needs a scenario description.");
+  }
+  if (config.mode === "ai-coding" && !getChallenge(config.challengeId)) {
+    throw new ValidationError("An AI-assisted coding interview needs a valid challenge.");
   }
   return config;
 }

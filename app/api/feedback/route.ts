@@ -2,6 +2,7 @@
  * POST /api/feedback — returns a FeedbackReport (JSON) for a finished
  * interview. See FeedbackRequest in lib/types.ts.
  */
+import { getChallenge } from "@/lib/challenges";
 import { errorResponse, generateJson, jsonError } from "@/lib/ai/llm";
 import { parseConfig, parseMetrics, parseTurns, readJsonBody, readNumber, ValidationError } from "@/lib/ai/validate";
 import {
@@ -28,9 +29,15 @@ const MODE_CATEGORIES: Record<InterviewMode, string[]> = {
   technical: ["Technical depth", "Accuracy", "Reasoning under questioning"],
   "system-design": ["Requirements gathering", "High-level design", "Deep dives", "Tradeoffs"],
   leetcode: ["Problem solving", "Code quality", "Testing & edge cases", "Complexity analysis"],
+  "ai-coding": ["Understanding the codebase", "Directing the AI", "Verifying AI output", "Testing & correctness"],
   custom: ["Persuasiveness & content", "Handling questions & objections"],
 };
 const CORE_CATEGORIES = ["Communication", "Structure", "Clarity & pace / filler words"];
+
+function challengeLine(id: string): string {
+  const c = getChallenge(id);
+  return c ? `Codebase: ${c.repo} (${c.url})\nTask: ${c.task}\nThey worked with an AI coding assistant; judge how they directed and verified it, not just the result.` : "";
+}
 
 export async function POST(req: Request): Promise<Response> {
   let config: InterviewConfig;
@@ -128,6 +135,7 @@ function buildFeedbackInput(
     config.company && `Company: ${config.company}`,
     `Difficulty: ${config.difficulty}`,
     `Planned length: ${config.durationMin} min; actual length: ${(durationSec / 60).toFixed(1)} min`,
+    config.mode === "ai-coding" && challengeLine(config.challengeId),
     config.mode === "custom" && `Scenario brief:\n<scenario>\n${config.customScenario}\n</scenario>`,
     config.jobDescription && `Job description:\n<job_description>\n${config.jobDescription}\n</job_description>`,
   ]

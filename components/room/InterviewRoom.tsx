@@ -15,6 +15,7 @@ import {
   type TurnRole,
 } from "@/lib/types";
 import { WAIT_MARKER } from "@/lib/ai/scenarios";
+import { getChallenge } from "@/lib/challenges";
 import { useSpeechRecognition } from "@/lib/voice/speech";
 import { useSpeaker } from "@/lib/voice/tts";
 import { useGeminiLive } from "@/lib/voice/live";
@@ -45,6 +46,7 @@ const AUTO_SEND_MS = 2500;
 /** Total silence (nothing said) before the interviewer may check in, per mode. */
 const IDLE_CHECK_MS: Record<InterviewConfig["mode"], number> = {
   leetcode: 60_000,
+  "ai-coding": 60_000,
   "system-design": 45_000,
   behavioral: 20_000,
   technical: 20_000,
@@ -114,6 +116,7 @@ interface InterviewRoomProps {
 }
 
 export default function InterviewRoom({ config, onRestart }: InterviewRoomProps) {
+  const challenge = config.mode === "ai-coding" ? getChallenge(config.challengeId) : undefined;
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("ready");
   const phaseRef = useRef<Phase>("ready");
@@ -627,12 +630,13 @@ export default function InterviewRoom({ config, onRestart }: InterviewRoomProps)
       lastFrameRef.current = null;
       setSharing(!!stream);
       // Hand the interviewer the problem right away instead of waiting for the next answer.
-      if (stream && config.mode === "leetcode" && phaseRef.current === "live") {
-        if (!isLive) void submitAnswer("I'm sharing my screen with the problem I want to work on.");
+      const what = config.mode === "leetcode" ? "the problem I want to work on" : config.mode === "ai-coding" ? "the codebase" : "";
+      if (stream && what && phaseRef.current === "live") {
+        if (!isLive) void submitAnswer(`I'm sharing my screen with ${what}.`);
         else
           void captureFrame(stream).then((frame) => {
             if (frame) live.sendFrame(frame);
-            live.sendText("[The candidate is now sharing their screen with the problem they want to work on.]", true);
+            live.sendText(`[The candidate is now sharing their screen with ${what.replace("I want", "they want")}.]`, true);
           });
       }
     },
@@ -778,6 +782,20 @@ export default function InterviewRoom({ config, onRestart }: InterviewRoomProps)
         </div>
 
         <aside className={styles.workspace} aria-label="Workspace">
+          {challenge && (
+            <section className={`card ${styles.tipCard}`}>
+              <strong>Your task</strong>
+              <p style={{ margin: "4px 0" }}>
+                <a href={challenge.url} target="_blank" rel="noreferrer">
+                  {challenge.repo}
+                </a>{" "}
+                <span className="muted small">· {challenge.language}</span>
+              </p>
+              <p className="muted" style={{ margin: 0 }}>
+                {challenge.task}
+              </p>
+            </section>
+          )}
           <section className={styles.section}>
             <button type="button" className={styles.sectionHead} aria-expanded={screenOpen} onClick={() => setScreenOpen((v) => !v)}>
               Screen share
@@ -788,7 +806,7 @@ export default function InterviewRoom({ config, onRestart }: InterviewRoomProps)
             </button>
             {/* Kept mounted while collapsed so an active share isn't interrupted. */}
             <div className={styles.sectionBody} hidden={!screenOpen}>
-              <ScreenShare onStreamChange={onStreamChange} compact={config.mode !== "leetcode"} />
+              <ScreenShare onStreamChange={onStreamChange} compact={config.mode !== "leetcode" && config.mode !== "ai-coding"} />
             </div>
           </section>
           <section className={styles.section}>

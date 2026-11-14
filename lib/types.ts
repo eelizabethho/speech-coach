@@ -14,6 +14,7 @@ export type InterviewMode =
   | "technical"
   | "system-design"
   | "leetcode"
+  | "ai-coding"
   | "custom";
 
 export type Difficulty = "easy" | "medium" | "hard";
@@ -46,6 +47,8 @@ export interface InterviewConfig {
   jobDescription: string;
   /** Only used when mode === "custom": the user's own scenario description */
   customScenario: string;
+  /** Only used when mode === "ai-coding": id from CHALLENGES in lib/challenges.ts */
+  challengeId: string;
   difficulty: Difficulty;
   /** Planned length in minutes (15 | 30 | 45 typical) */
   durationMin: number;
@@ -62,6 +65,7 @@ export const DEFAULT_CONFIG: InterviewConfig = {
   company: "",
   jobDescription: "",
   customScenario: "",
+  challengeId: "",
   difficulty: "medium",
   durationMin: 30,
   model: "claude-haiku-5-5",
@@ -74,6 +78,7 @@ export const MODE_LABELS: Record<InterviewMode, string> = {
   technical: "Technical",
   "system-design": "System design",
   leetcode: "LeetCode / coding",
+  "ai-coding": "AI-assisted coding",
   custom: "Custom scenario",
 };
 
